@@ -59,9 +59,26 @@ export default function LoginPage() {
     try {
       const response = await auth.login(formData)
       setAuth(response.token, response.user, response.tenant)
+
+      // Save subdomain for development
+      localStorage.setItem('dev-subdomain', response.tenant.subdomain)
+
       navigate('/dashboard')
     } catch (err) {
-      setError(err.message)
+      console.error('Login error:', err.message)
+
+      // Provide user-friendly error messages
+      if (err.message.includes('Service not found')) {
+        setError('Backend service is not available. Please try again in a few moments.')
+      } else if (err.message.includes('Server error')) {
+        setError('Server is experiencing issues. Please try again later.')
+      } else if (err.message.includes('temporarily unavailable')) {
+        setError('Service is temporarily unavailable. Please try again.')
+      } else if (err.message.includes('Request timed out')) {
+        setError('Request timed out. Please check your connection and try again.')
+      } else {
+        setError(err.message)
+      }
     } finally {
       setLoading(false)
     }

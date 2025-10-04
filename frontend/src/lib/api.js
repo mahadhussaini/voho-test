@@ -22,31 +22,58 @@ export const getSubdomain = () => {
 export const apiRequest = async (endpoint, options = {}) => {
   const token = JSON.parse(localStorage.getItem('voho-auth-storage') || '{}')?.state?.token
   const subdomain = getSubdomain()
-  
+
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
   }
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }
-  
+
   if (subdomain) {
     headers['X-Tenant-Subdomain'] = subdomain
   }
-  
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  })
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Request failed' }))
-    throw new Error(error.error || error.message || 'Request failed')
+
+  // Add timeout to prevent hanging requests
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+  try {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Request failed' }))
+
+      // Handle specific error cases
+      if (response.status === 404) {
+        throw new Error('Service not found. Please check if the backend is running.')
+      } else if (response.status === 500) {
+        throw new Error('Server error. Please try again later.')
+      } else if (response.status === 503) {
+        throw new Error('Service temporarily unavailable. Please try again.')
+      }
+
+      throw new Error(error.error || error.message || 'Request failed')
+    }
+
+    return response.json()
+  } catch (error) {
+    clearTimeout(timeoutId)
+
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection.')
+    }
+
+    throw error
   }
-  
-  return response.json()
 }
 
 // Auth API

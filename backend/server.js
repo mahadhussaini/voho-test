@@ -114,37 +114,39 @@ const connectDB = async (retries = 3) => {
 const startServer = async () => {
   const PORT = process.env.PORT || 10000;
 
-  try {
-    // Connect to database first
-    await connectDB();
+  // Start the server first (even without database)
+  const server = app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
 
-    // Start the server
-    const server = app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    // Try to connect to database after server starts
+    connectDB().catch(err => {
+      console.error('⚠️ Database connection failed, but server is running:', err.message);
+      console.log('💡 Some features may not work until database is connected');
     });
+  });
 
-    // Graceful shutdown
-    process.on('SIGTERM', () => {
-      console.log('SIGTERM received, shutting down gracefully');
-      server.close(() => {
-        mongoose.connection.close(false, () => {
-          console.log('MongoDB connection closed');
-          process.exit(0);
-        });
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    server.close(() => {
+      mongoose.connection.close(false, () => {
+        console.log('MongoDB connection closed');
+        process.exit(0);
       });
     });
+  });
 
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
-  }
+  return server;
 };
 
 // Start server (only if not in test mode)
 if (process.env.NODE_ENV !== 'test') {
-  startServer();
+  startServer().catch(error => {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  });
 }
 
 export default app;

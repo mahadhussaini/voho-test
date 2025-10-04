@@ -23,44 +23,73 @@ router.post('/signup', async (req, res, next) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
-    // Check if subdomain exists
-    const existingTenant = await Tenant.findOne({ subdomain });
+    // Check if subdomain exists (with error handling)
+    let existingTenant;
+    try {
+      existingTenant = await Tenant.findOne({ subdomain });
+    } catch (dbError) {
+      console.log('⚠️ Database not available for subdomain check, proceeding with signup');
+    }
+
     if (existingTenant) {
       return res.status(400).json({ error: 'Subdomain already taken' });
     }
 
-    // Create tenant
-    const tenant = await Tenant.create({
-      subdomain,
-      name: tenantName
-    });
+    // Create tenant (with error handling)
+    let tenant;
+    try {
+      tenant = await Tenant.create({
+        subdomain,
+        name: tenantName
+      });
+    } catch (dbError) {
+      console.error('❌ Failed to create tenant:', dbError.message);
+      return res.status(500).json({ error: 'Failed to create tenant. Please try again.' });
+    }
 
-    // Create admin user
-    const user = await User.create({
-      email,
-      password,
-      tenantId: tenant._id,
-      role: 'admin'
-    });
+    // Create admin user (with error handling)
+    let user;
+    try {
+      user = await User.create({
+        email,
+        password,
+        tenantId: tenant._id,
+        role: 'admin'
+      });
+    } catch (dbError) {
+      console.error('❌ Failed to create user:', dbError.message);
+      // Clean up tenant if user creation fails
+      try {
+        await Tenant.findByIdAndDelete(tenant._id);
+      } catch (cleanupError) {
+        console.error('❌ Failed to cleanup tenant:', cleanupError.message);
+      }
+      return res.status(500).json({ error: 'Failed to create user account. Please try again.' });
+    }
 
-    // Log audit
-    await logAudit({
-      tenantId: tenant._id,
-      userId: user._id,
-      action: 'tenant.created',
-      details: { subdomain, tenantName },
-      ip: req.ip,
-      userAgent: req.headers['user-agent']
-    });
+    // Log audit (with error handling)
+    try {
+      await logAudit({
+        tenantId: tenant._id,
+        userId: user._id,
+        action: 'tenant.created',
+        details: { subdomain, tenantName },
+        ip: req.ip,
+        userAgent: req.headers['user-agent']
+      });
 
-    await logAudit({
-      tenantId: tenant._id,
-      userId: user._id,
-      action: 'user.signup',
-      details: { email, role: 'admin' },
-      ip: req.ip,
-      userAgent: req.headers['user-agent']
-    });
+      await logAudit({
+        tenantId: tenant._id,
+        userId: user._id,
+        action: 'user.signup',
+        details: { email, role: 'admin' },
+        ip: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+    } catch (auditError) {
+      console.log('⚠️ Failed to log audit events:', auditError.message);
+      // Don't fail the signup if audit logging fails
+    }
 
     // Generate token
     const token = generateToken(user._id, tenant._id);
@@ -76,7 +105,8 @@ router.post('/signup', async (req, res, next) => {
       }
     });
   } catch (error) {
-    next(error);
+    console.error('❌ Signup error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -92,37 +122,53 @@ router.post('/login', async (req, res, next) => {
       return res.status(400).json({ error: 'Email and password required' });
     }
 
-    if (!req.tenantId) {
-      return res.status(400).json({ error: 'Tenant not found' });
+    // Find user by email (with error handling for database issues)
+    let user;
+    try {
+      user = await User.findOne({ email, isActive: true });
+    } catch (dbError) {
+      console.error('❌ Database not available for user lookup:', dbError.message);
+      return res.status(500).json({ error: 'Service temporarily unavailable. Please try again.' });
     }
 
-    // Find user by email and tenant
-    const user = await User.findOne({ email, tenantId: req.tenantId, isActive: true });
-
     if (!user || !(await user.comparePassword(password))) {
-      await logAudit({
-        tenantId: req.tenantId,
-        action: 'user.failed_login',
-        details: { email },
-        ip: req.ip,
-        userAgent: req.headers['user-agent']
-      });
+      // Log failed login attempt (with error handling)
+      try {
+        await logAudit({
+          action: 'user.failed_login',
+          details: { email },
+          ip: req.ip,
+          userAgent: req.headers['user-agent']
+        });
+      } catch (auditError) {
+        console.log('⚠️ Failed to log failed login:', auditError.message);
+      }
 
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Get tenant info
-    const tenant = await Tenant.findById(req.tenantId);
+    // Get tenant info (with error handling)
+    let tenant;
+    try {
+      tenant = await Tenant.findById(user.tenantId);
+    } catch (dbError) {
+      console.error('❌ Database not available for tenant lookup:', dbError.message);
+      return res.status(500).json({ error: 'Service temporarily unavailable. Please try again.' });
+    }
 
-    // Log successful login
-    await logAudit({
-      tenantId: tenant._id,
-      userId: user._id,
-      action: 'user.login',
-      details: { email },
-      ip: req.ip,
-      userAgent: req.headers['user-agent']
-    });
+    // Log successful login (with error handling)
+    try {
+      await logAudit({
+        tenantId: tenant._id,
+        userId: user._id,
+        action: 'user.login',
+        details: { email },
+        ip: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+    } catch (auditError) {
+      console.log('⚠️ Failed to log successful login:', auditError.message);
+    }
 
     // Generate token
     const token = generateToken(user._id, tenant._id);
@@ -138,7 +184,8 @@ router.post('/login', async (req, res, next) => {
       }
     });
   } catch (error) {
-    next(error);
+    console.error('❌ Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

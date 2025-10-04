@@ -10,10 +10,21 @@ const router = express.Router();
  * GET /api/tenant/branding
  * Get tenant branding (public)
  */
-router.get('/branding', requireTenant, async (req, res, next) => {
+router.get('/branding', async (req, res, next) => {
   try {
-    const tenant = await Tenant.findById(req.tenantId);
-    
+    if (!req.tenantId) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+
+    // Get tenant info (with error handling)
+    let tenant;
+    try {
+      tenant = await Tenant.findById(req.tenantId);
+    } catch (dbError) {
+      console.error('❌ Database not available for tenant lookup:', dbError.message);
+      return res.status(500).json({ error: 'Service temporarily unavailable. Please try again.' });
+    }
+
     if (!tenant) {
       return res.status(404).json({ error: 'Tenant not found' });
     }
@@ -24,7 +35,8 @@ router.get('/branding', requireTenant, async (req, res, next) => {
       branding: tenant.branding
     });
   } catch (error) {
-    next(error);
+    console.error('❌ Branding lookup error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -36,8 +48,19 @@ router.put('/branding', authenticate, requireAdmin, async (req, res, next) => {
   try {
     const { logo, primaryColor, name } = req.body;
 
-    const tenant = await Tenant.findById(req.tenantId);
-    
+    if (!req.tenantId) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+
+    // Get tenant info (with error handling)
+    let tenant;
+    try {
+      tenant = await Tenant.findById(req.tenantId);
+    } catch (dbError) {
+      console.error('❌ Database not available for tenant lookup:', dbError.message);
+      return res.status(500).json({ error: 'Service temporarily unavailable. Please try again.' });
+    }
+
     if (!tenant) {
       return res.status(404).json({ error: 'Tenant not found' });
     }
@@ -47,24 +70,35 @@ router.put('/branding', authenticate, requireAdmin, async (req, res, next) => {
     if (logo !== undefined) tenant.branding.logo = logo;
     if (primaryColor) tenant.branding.primaryColor = primaryColor;
 
-    await tenant.save();
+    // Save tenant (with error handling)
+    try {
+      await tenant.save();
+    } catch (dbError) {
+      console.error('❌ Failed to save tenant:', dbError.message);
+      return res.status(500).json({ error: 'Failed to update tenant. Please try again.' });
+    }
 
-    // Log audit
-    await logAudit({
-      tenantId: tenant._id,
-      userId: req.userId,
-      action: 'branding.updated',
-      details: { logo, primaryColor, name },
-      ip: req.ip,
-      userAgent: req.headers['user-agent']
-    });
+    // Log audit (with error handling)
+    try {
+      await logAudit({
+        tenantId: tenant._id,
+        userId: req.userId,
+        action: 'branding.updated',
+        details: { logo, primaryColor, name },
+        ip: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+    } catch (auditError) {
+      console.log('⚠️ Failed to log branding update:', auditError.message);
+    }
 
     res.json({
       name: tenant.name,
       branding: tenant.branding
     });
   } catch (error) {
-    next(error);
+    console.error('❌ Branding update error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -74,15 +108,27 @@ router.put('/branding', authenticate, requireAdmin, async (req, res, next) => {
  */
 router.get('/info', authenticate, async (req, res, next) => {
   try {
-    const tenant = await Tenant.findById(req.tenantId);
-    
+    if (!req.tenantId) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+
+    // Get tenant info (with error handling)
+    let tenant;
+    try {
+      tenant = await Tenant.findById(req.tenantId);
+    } catch (dbError) {
+      console.error('❌ Database not available for tenant info lookup:', dbError.message);
+      return res.status(500).json({ error: 'Service temporarily unavailable. Please try again.' });
+    }
+
     if (!tenant) {
       return res.status(404).json({ error: 'Tenant not found' });
     }
 
     res.json(tenant);
   } catch (error) {
-    next(error);
+    console.error('❌ Tenant info lookup error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

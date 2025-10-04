@@ -3,6 +3,7 @@ import Tenant from '../models/Tenant.js';
 /**
  * Middleware to resolve tenant from subdomain or header
  * Supports both subdomain routing and header-based tenant resolution for development
+ * Gracefully handles database connection issues
  */
 export const tenantMiddleware = async (req, res, next) => {
   try {
@@ -22,12 +23,17 @@ export const tenantMiddleware = async (req, res, next) => {
       }
     }
 
-    // In test environment, allow any subdomain, otherwise filter out localhost and www
-    if (subdomain) {
-      const tenant = await Tenant.findOne({ subdomain, isActive: true });
-      if (tenant) {
-        req.tenant = tenant;
-        req.tenantId = tenant._id;
+    // Skip tenant lookup for certain paths (like auth routes)
+    if (subdomain && !req.path.startsWith('/api/auth/')) {
+      try {
+        const tenant = await Tenant.findOne({ subdomain, isActive: true });
+        if (tenant) {
+          req.tenant = tenant;
+          req.tenantId = tenant._id;
+        }
+      } catch (dbError) {
+        // If database is not connected, just log and continue
+        console.log('⚠️ Database not available for tenant lookup, continuing without tenant');
       }
     }
 
