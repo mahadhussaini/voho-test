@@ -19,36 +19,51 @@ app.use(express.urlencoded({ extended: true }));
 
 // CORS configuration for production
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'https://voho-saas.vercel.app',
-  'https://voho-saas-mi3lqi5ab-mahad-arshads-projects.vercel.app', // Current Vercel deployment
+  process.env.FRONTEND_URL,
+  'https://voho-saas.vercel.app',
+  'https://voho-saas-3qm8fabcj-mahad-arshads-projects.vercel.app', // Current Vercel deployment
+  'https://voho-saas-mi3lqi5ab-mahad-arshads-projects.vercel.app', // Previous Vercel deployment
   'http://localhost:5173',
   'http://localhost:3000',
   'https://localhost:5173',
   'https://localhost:3000'
-];
+].filter(Boolean); // Remove undefined values
 
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('✅ Allowed request with no origin (mobile app, curl, etc.)');
+      return callback(null, true);
+    }
 
-    // Allow all Vercel deployments
-    if (origin.endsWith('.vercel.app')) {
+    // Allow all Vercel deployments (*.vercel.app)
+    if (origin && origin.endsWith('.vercel.app')) {
       console.log('✅ Allowed CORS request from Vercel:', origin);
       return callback(null, true);
     }
 
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('Blocked CORS request from:', origin);
-      console.log('Allowed origins:', allowedOrigins);
-      callback(new Error('Not allowed by CORS'));
+    // Allow localhost for development
+    if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+      console.log('✅ Allowed CORS request from localhost:', origin);
+      return callback(null, true);
     }
+
+    // Check explicitly allowed origins
+    if (allowedOrigins.includes(origin)) {
+      console.log('✅ Allowed CORS request from allowed origin:', origin);
+      return callback(null, true);
+    }
+
+    // Block all other origins
+    console.log('❌ Blocked CORS request from:', origin);
+    console.log('Allowed origins:', allowedOrigins);
+    console.log('Environment FRONTEND_URL:', process.env.FRONTEND_URL);
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Subdomain']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Subdomain', 'Accept', 'Origin', 'User-Agent']
 }));
 
 // Pre-flight requests

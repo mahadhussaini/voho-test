@@ -8,7 +8,7 @@
 import https from 'https';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://voho-saas.vercel.app';
-const BACKEND_URL = process.env.BACKEND_URL || 'https://voho-saas-backend.onrender.com';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://voho-saas.onrender.com';
 
 console.log('🔍 Voho SaaS Deployment Health Check');
 console.log('=====================================\n');
