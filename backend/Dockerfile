@@ -7,8 +7,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install dependencies (use npm ci for production builds)
+RUN npm ci --only=production --silent && npm cache clean --force
 
 # Copy application code
 COPY . .
@@ -20,6 +20,9 @@ RUN adduser -S voho -u 1001
 # Change ownership of app directory
 RUN chown -R voho:nodejs /app
 USER voho
+
+# Make healthcheck executable
+RUN chmod +x healthcheck.js
 
 # Expose port
 EXPOSE 10000
