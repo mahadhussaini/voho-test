@@ -75,11 +75,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Tenant resolution middleware
+// Auth routes (before tenant middleware - no tenant context needed)
+app.use('/api/auth', authRoutes);
+
+// Tenant resolution middleware (applied to all routes after auth)
 app.use(tenantMiddleware);
 
-// API Routes
-app.use('/api/auth', authRoutes);
+// Other API routes (require tenant context)
 app.use('/api/tenant', tenantRoutes);
 app.use('/api/calls', callRoutes);
 app.use('/api/dashboard', dashboardRoutes);
@@ -158,6 +160,7 @@ const startServer = async () => {
 
     server.close(async () => {
       try {
+        // Close database connection without callback (Mongoose 8+ compatibility)
         await mongoose.connection.close();
         console.log('MongoDB connection closed');
         process.exit(0);
@@ -166,6 +169,17 @@ const startServer = async () => {
         process.exit(1);
       }
     });
+  });
+
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    process.exit(1);
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
   });
 
   return server;

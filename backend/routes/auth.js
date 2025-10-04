@@ -11,15 +11,19 @@ const router = express.Router();
  * Create new tenant and admin user
  */
 router.post('/signup', async (req, res, next) => {
+  console.log('🔐 Signup request received:', { email: req.body.email, subdomain: req.body.subdomain });
+
   try {
     const { email, password, subdomain, tenantName } = req.body;
 
     // Validation
     if (!email || !password || !subdomain || !tenantName) {
+      console.log('❌ Signup validation failed: missing required fields');
       return res.status(400).json({ error: 'All fields are required' });
     }
 
     if (password.length < 6) {
+      console.log('❌ Signup validation failed: password too short');
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
@@ -94,6 +98,8 @@ router.post('/signup', async (req, res, next) => {
     // Generate token
     const token = generateToken(user._id, tenant._id);
 
+    console.log('✅ Signup successful for user:', email, 'tenant:', subdomain);
+
     res.status(201).json({
       token,
       user: user.toJSON(),
@@ -115,10 +121,13 @@ router.post('/signup', async (req, res, next) => {
  * Authenticate user
  */
 router.post('/login', async (req, res, next) => {
+  console.log('🔐 Login request received:', { email: req.body.email });
+
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
+      console.log('❌ Login validation failed: missing email or password');
       return res.status(400).json({ error: 'Email and password required' });
     }
 
@@ -172,6 +181,8 @@ router.post('/login', async (req, res, next) => {
 
     // Generate token
     const token = generateToken(user._id, tenant._id);
+
+    console.log('✅ Login successful for user:', email, 'tenant:', tenant.subdomain);
 
     res.json({
       token,
