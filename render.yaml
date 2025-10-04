@@ -19,10 +19,8 @@ services:
         value: https://api.ultravox.ai
       - key: FRONTEND_URL
         sync: false
-    disk:
-      name: voho-saas-data
-      mountPath: /data
-      sizeGB: 1
+    # Health check is handled by Docker HEALTHCHECK instruction
+    # No need for manual healthCheckPath or disk for this app
     plan: free
     region: oregon
     autoDeploy: false
