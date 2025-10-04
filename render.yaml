@@ -19,7 +19,6 @@ services:
         value: https://api.ultravox.ai
       - key: FRONTEND_URL
         sync: false
-    healthCheckPath: /api/health
     plan: free
     region: oregon
     autoDeploy: false

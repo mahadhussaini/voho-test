@@ -7,29 +7,26 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (use npm ci for production builds)
-RUN npm ci --only=production --silent && npm cache clean --force
+# Install dependencies (production only using npm install)
+RUN npm install --production && npm cache clean --force
 
-# Copy application code
+# Copy application code (after dependencies to leverage Docker layer caching)
 COPY . .
 
 # Create non-root user for security
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S voho -u 1001
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S voho -u 1001 && \
+    chown -R voho:nodejs /app
 
-# Change ownership of app directory
-RUN chown -R voho:nodejs /app
+# Switch to non-root user
 USER voho
-
-# Make healthcheck executable
-RUN chmod +x healthcheck.js
 
 # Expose port
 EXPOSE 10000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node healthcheck.js
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD node healthcheck.js || exit 1
 
 # Start the application
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
