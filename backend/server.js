@@ -86,41 +86,15 @@ app.use('/api/tenant', tenantRoutes);
 app.use('/api/calls', callRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-// Health check endpoint - must respond quickly
+// Health check endpoint
 app.get('/api/health', (req, res) => {
-  const isHealthy = mongoose.connection.readyState === 1;
-
-  // Respond immediately with basic health status
-  res.status(isHealthy ? 200 : 503).json({
-    status: isHealthy ? 'ok' : 'service_unavailable',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    port: process.env.PORT || 10000,
-    mongodb: isHealthy ? 'connected' : 'disconnected',
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    version: '1.0.0'
-  });
-});
-
-// Detailed health check
-app.get('/api/health/detailed', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    port: process.env.PORT || 10000,
-    mongodb: {
-      state: mongoose.connection.readyState,
-      name: mongoose.connection.name,
-      host: mongoose.connection.host,
-      port: mongoose.connection.port
-    },
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    version: '1.0.0',
-    node: process.version,
-    platform: process.platform
+    port: process.env.PORT || 5000,
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    tenant: req.tenant?.subdomain || 'none'
   });
 });
 
@@ -166,40 +140,18 @@ const connectDB = async (retries = 3) => {
 // Start server
 const startServer = async () => {
   const PORT = process.env.PORT || 10000;
-  const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
 
-  console.log(`🚀 Starting Voho SaaS Backend...`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔌 Target: ${HOST}:${PORT}`);
+  // Start the server first (even without database)
+  const server = app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
 
-  // Connect to database first (critical for health checks)
-  try {
-    console.log('🔌 Connecting to MongoDB...');
-    await connectDB();
-    console.log('✅ Database connected successfully');
-  } catch (err) {
-    console.error('❌ Database connection failed:', err.message);
-    console.log('💡 Server will start anyway, but health checks will fail');
-
-    // In production, we might want to exit if DB is critical
-    if (process.env.NODE_ENV === 'production') {
-      console.log('💥 Exiting in production due to database failure');
-      process.exit(1);
-    }
-  }
-
-  // Start the server after database connection attempt
-  const server = app.listen(PORT, HOST, () => {
-    console.log(`🚀 Server running on ${HOST}:${PORT}`);
-    console.log(`🌐 Health check: http://${HOST}:${PORT}/api/health`);
-    console.log(`🔗 Ready to accept connections at http://${HOST}:${PORT}`);
-    console.log(`⏰ Uptime monitoring started`);
-  });
-
-  // Handle server errors
-  server.on('error', (error) => {
-    console.error('❌ Server error:', error);
-    process.exit(1);
+    // Try to connect to database after server starts
+    connectDB().catch(err => {
+      console.error('⚠️ Database connection failed, but server is running:', err.message);
+      console.log('💡 Some features may not work until database is connected');
+    });
   });
 
   // Graceful shutdown
