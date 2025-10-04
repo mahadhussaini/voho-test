@@ -5,10 +5,10 @@
  * Run this after deployment to verify everything is working
  */
 
-const https = require('https');
+import https from 'https';
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://your-vercel-app.vercel.app';
-const BACKEND_URL = process.env.BACKEND_URL || 'https://your-render-backend.onrender.com';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://voho-saas.vercel.app';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://voho-saas-backend.onrender.com';
 
 console.log('🔍 Voho SaaS Deployment Health Check');
 console.log('=====================================\n');

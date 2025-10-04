@@ -19,6 +19,10 @@ services:
         value: https://api.ultravox.ai
       - key: FRONTEND_URL
         sync: false
+    disk:
+      name: voho-saas-data
+      mountPath: /data
+      sizeGB: 1
     plan: free
     region: oregon
     autoDeploy: false
