@@ -25,11 +25,15 @@ export default function LoginPage() {
     // Get subdomain and load tenant branding
     const currentSubdomain = getSubdomain()
     setSubdomain(currentSubdomain)
-    
+
     if (currentSubdomain) {
       tenant.getBranding()
         .then(data => setTenantInfo(data))
-        .catch(() => setError('Tenant not found'))
+        .catch((error) => {
+          // Don't show error for missing tenant - this is expected for new users
+          console.log('Tenant branding not found (expected for new subdomain):', error.message)
+          setTenantInfo(null)
+        })
     } else {
       // For development, allow setting subdomain
       const devSubdomain = localStorage.getItem('dev-subdomain')
@@ -76,6 +80,10 @@ export default function LoginPage() {
         setError('Service is temporarily unavailable. Please try again.')
       } else if (err.message.includes('Request timed out')) {
         setError('Request timed out. Please check your connection and try again.')
+      } else if (err.message.includes('Tenant not found')) {
+        setError('The subdomain you entered does not exist. Please check and try again.')
+      } else if (err.message.includes('Invalid credentials')) {
+        setError('Invalid email or password. Please check your credentials.')
       } else {
         setError(err.message)
       }

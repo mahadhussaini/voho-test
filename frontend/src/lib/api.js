@@ -1,4 +1,17 @@
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+// Determine API URL based on environment
+const API_URL = (() => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // In development, use relative path for proxy
+  if (import.meta.env.DEV) {
+    return '/api';
+  }
+
+  // In production (Vercel), use full backend URL
+  return 'https://voho-saas.onrender.com';
+})();
 
 /**
  * Get current subdomain from window location
@@ -41,6 +54,7 @@ export const apiRequest = async (endpoint, options = {}) => {
   const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
   try {
+    console.log(`🔗 Making API request to: ${API_URL}${endpoint}`);
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
       headers,
@@ -59,6 +73,8 @@ export const apiRequest = async (endpoint, options = {}) => {
         throw new Error('Server error. Please try again later.')
       } else if (response.status === 503) {
         throw new Error('Service temporarily unavailable. Please try again.')
+      } else if (response.status === 403) {
+        throw new Error('Access denied. Please check your permissions.')
       }
 
       throw new Error(error.error || error.message || 'Request failed')
@@ -71,6 +87,13 @@ export const apiRequest = async (endpoint, options = {}) => {
     if (error.name === 'AbortError') {
       throw new Error('Request timed out. Please check your connection.')
     }
+
+    // Log the error for debugging
+    console.error('API Request failed:', {
+      endpoint: `${API_URL}${endpoint}`,
+      error: error.message,
+      status: error.status
+    });
 
     throw error
   }

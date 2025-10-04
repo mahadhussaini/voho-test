@@ -20,8 +20,11 @@ app.use(express.urlencoded({ extended: true }));
 // CORS configuration for production
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'https://voho-saas.vercel.app',
+  'https://voho-saas-mi3lqi5ab-mahad-arshads-projects.vercel.app', // Current Vercel deployment
   'http://localhost:5173',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  'https://localhost:5173',
+  'https://localhost:3000'
 ];
 
 app.use(cors({
@@ -29,10 +32,17 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
+    // Allow all Vercel deployments
+    if (origin.endsWith('.vercel.app')) {
+      console.log('✅ Allowed CORS request from Vercel:', origin);
+      return callback(null, true);
+    }
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       console.log('Blocked CORS request from:', origin);
+      console.log('Allowed origins:', allowedOrigins);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -128,13 +138,18 @@ const startServer = async () => {
   });
 
   // Graceful shutdown
-  process.on('SIGTERM', () => {
+  process.on('SIGTERM', async () => {
     console.log('SIGTERM received, shutting down gracefully');
-    server.close(() => {
-      mongoose.connection.close(false, () => {
+
+    server.close(async () => {
+      try {
+        await mongoose.connection.close();
         console.log('MongoDB connection closed');
         process.exit(0);
-      });
+      } catch (error) {
+        console.error('Error closing MongoDB connection:', error);
+        process.exit(1);
+      }
     });
   });
 
