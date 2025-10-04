@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: voho-saas-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ULTRAVOX_API_KEY
+        sync: false
+      - key: ULTRAVOX_API_URL
+        value: https://api.ultravox.ai
+      - key: FRONTEND_URL
+        sync: false
+    healthCheckPath: /api/health
+    plan: free
+    region: oregon
+    autoDeploy: false
