@@ -13,6 +13,14 @@ export default function CallsPage() {
   const [selectedCall, setSelectedCall] = useState(null)
   const { tenant } = useAuthStore()
 
+  // Debug tenant information
+  console.log('🔍 CallsPage - Tenant info:', {
+    tenant,
+    tenantId: tenant?.id,
+    tenantName: tenant?.name,
+    isAuthenticated: !!useAuthStore.getState().token
+  })
+
   // Fetch all calls
   const { data: callsData, isLoading } = useQuery({
     queryKey: ['calls'],
@@ -22,12 +30,21 @@ export default function CallsPage() {
 
   // Create call mutation
   const createCallMutation = useMutation({
-    mutationFn: () => calls.create({
-      systemPrompt: 'You are a helpful AI assistant for customer support.',
-      model: 'fixie-ai/ultravox',
-      voice: 'default',
-      tenantId: tenant?.id, // Include tenantId for backend validation
-    }),
+    mutationFn: async () => {
+      // Ensure tenant information is available
+      if (!tenant?.id) {
+        throw new Error('Tenant information not available. Please refresh the page and try again.');
+      }
+
+      console.log('🔗 Creating call with tenantId:', tenant.id);
+
+      return calls.create({
+        systemPrompt: 'You are a helpful AI assistant for customer support.',
+        model: 'fixie-ai/ultravox',
+        voice: 'default',
+        tenantId: tenant.id, // Include tenantId for backend validation
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['calls'])
       queryClient.invalidateQueries(['dashboard-metrics'])

@@ -171,10 +171,13 @@ export const tenant = {
 
 // Calls API
 export const calls = {
-  create: (data) => apiRequest('/calls', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
+  create: (data) => {
+    console.log('🔗 calls.create called with data:', data);
+    return apiRequest('/calls', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
 
   getAll: () => apiRequest('/calls'),
 
