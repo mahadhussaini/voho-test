@@ -71,8 +71,15 @@ export const apiRequest = async (endpoint, options = {}) => {
 
   try {
     // Ensure API_URL is properly formatted
-    if (!API_URL || !API_URL.startsWith('http')) {
-      throw new Error(`Invalid API_URL: ${API_URL}`);
+    if (!API_URL) {
+      throw new Error('API_URL is not defined');
+    }
+
+    // In development, allow relative URLs for proxy
+    if (import.meta.env.DEV && !API_URL.startsWith('http')) {
+      // Relative URL is valid for development proxy
+    } else if (!import.meta.env.DEV && !API_URL.startsWith('http')) {
+      throw new Error(`Invalid API_URL for production: ${API_URL}`);
     }
 
     // Ensure endpoint starts with /

@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { calls } from '@/lib/api'
+import { useAuthStore } from '@/store/useAuthStore'
 import { Phone, PlayCircle, Loader2, ExternalLink } from 'lucide-react'
 import CallDetailsModal from '@/components/CallDetailsModal'
 
 export default function CallsPage() {
   const queryClient = useQueryClient()
   const [selectedCall, setSelectedCall] = useState(null)
+  const { tenant } = useAuthStore()
 
   // Fetch all calls
   const { data: callsData, isLoading } = useQuery({
@@ -24,6 +26,7 @@ export default function CallsPage() {
       systemPrompt: 'You are a helpful AI assistant for customer support.',
       model: 'fixie-ai/ultravox',
       voice: 'default',
+      tenantId: tenant?.id, // Include tenantId for backend validation
     }),
     onSuccess: () => {
       queryClient.invalidateQueries(['calls'])
