@@ -1,17 +1,32 @@
 // Determine API URL based on environment
 const API_URL = (() => {
-  // Always use VITE_API_URL if provided
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  // Debug environment variables
+  console.log('🔍 Environment check:', {
+    VITE_API_URL: import.meta.env.VITE_API_URL,
+    DEV: import.meta.env.DEV,
+    MODE: import.meta.env.MODE,
+    location: typeof window !== 'undefined' ? window.location.href : 'SSR'
+  });
+
+  // Clean VITE_API_URL value
+  const viteApiUrl = import.meta.env.VITE_API_URL?.trim();
+
+  // Always use VITE_API_URL if provided and it's a valid URL
+  if (viteApiUrl && viteApiUrl.startsWith('http') && viteApiUrl.includes('://')) {
+    console.log('✅ Using VITE_API_URL:', viteApiUrl);
+    return viteApiUrl;
   }
 
   // In development, use relative path for proxy
   if (import.meta.env.DEV) {
+    console.log('✅ Using development proxy: /api');
     return '/api';
   }
 
   // In production (Vercel), use full backend URL with /api prefix
-  return 'https://voho-saas.onrender.com/api';
+  const productionUrl = 'https://voho-saas.onrender.com/api';
+  console.log('✅ Using production backend URL:', productionUrl);
+  return productionUrl;
 })();
 
 /**
@@ -55,8 +70,21 @@ export const apiRequest = async (endpoint, options = {}) => {
   const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
   try {
-    console.log(`🔗 Making API request to: ${API_URL}${endpoint}`);
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    // Ensure API_URL is properly formatted
+    if (!API_URL || !API_URL.startsWith('http')) {
+      throw new Error(`Invalid API_URL: ${API_URL}`);
+    }
+
+    // Ensure endpoint starts with /
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const fullUrl = `${API_URL}${normalizedEndpoint}`;
+
+    console.log(`🔗 Making API request to: ${fullUrl}`);
+    console.log(`🔗 API_URL: "${API_URL}"`);
+    console.log(`🔗 Endpoint: "${normalizedEndpoint}"`);
+    console.log(`🔗 Full URL: "${fullUrl}"`);
+
+    const response = await fetch(fullUrl, {
       ...options,
       headers,
       signal: controller.signal,
@@ -65,7 +93,13 @@ export const apiRequest = async (endpoint, options = {}) => {
     clearTimeout(timeoutId)
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Request failed' }))
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error('❌ API Response not OK:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: fullUrl,
+        responseText: errorText
+      });
 
       // Handle specific error cases
       if (response.status === 404) {
@@ -76,9 +110,11 @@ export const apiRequest = async (endpoint, options = {}) => {
         throw new Error('Service temporarily unavailable. Please try again.')
       } else if (response.status === 403) {
         throw new Error('Access denied. Please check your permissions.')
+      } else if (response.status === 405) {
+        throw new Error('Method not allowed. Please check the API endpoint.')
       }
 
-      throw new Error(error.error || error.message || 'Request failed')
+      throw new Error(`Request failed: ${errorText}`)
     }
 
     return response.json()
@@ -91,9 +127,10 @@ export const apiRequest = async (endpoint, options = {}) => {
 
     // Log the error for debugging
     console.error('API Request failed:', {
-      endpoint: `${API_URL}${endpoint}`,
+      API_URL,
+      endpoint,
       error: error.message,
-      status: error.status
+      stack: error.stack
     });
 
     throw error
