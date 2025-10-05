@@ -1,5 +1,6 @@
 // Determine API URL based on environment
 const API_URL = (() => {
+  // Always use VITE_API_URL if provided
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
@@ -9,7 +10,7 @@ const API_URL = (() => {
     return '/api';
   }
 
-  // In production (Vercel), use full backend URL
+  // In production (Vercel), use full backend URL with /api prefix
   return 'https://voho-saas.onrender.com/api';
 })();
 

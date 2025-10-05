@@ -78,6 +78,9 @@ app.use((req, res, next) => {
 // Auth routes (before tenant middleware - no tenant context needed)
 app.use('/api/auth', authRoutes);
 
+// Fallback route for direct requests (in case Vercel proxy isn't working)
+app.use('/auth', authRoutes);
+
 // Tenant resolution middleware (applied to all routes after auth)
 app.use(tenantMiddleware);
 
