@@ -23,6 +23,16 @@ export const tenantMiddleware = async (req, res, next) => {
       }
     }
 
+    // Log tenant resolution for debugging
+    console.log('🔍 Tenant resolution:', {
+      path: req.path,
+      method: req.method,
+      host: req.headers.host,
+      subdomain: subdomain,
+      headerSubdomain: req.headers['x-tenant-subdomain'],
+      skipLookup: req.path.startsWith('/api/auth/')
+    });
+
     // Skip tenant lookup for certain paths (like auth routes)
     if (subdomain && !req.path.startsWith('/api/auth/')) {
       try {
@@ -30,11 +40,16 @@ export const tenantMiddleware = async (req, res, next) => {
         if (tenant) {
           req.tenant = tenant;
           req.tenantId = tenant._id;
+          console.log('✅ Tenant found:', { subdomain, tenantId: tenant._id, name: tenant.name });
+        } else {
+          console.log('⚠️ Tenant not found in database:', subdomain);
         }
       } catch (dbError) {
         // If database is not connected, just log and continue
-        console.log('⚠️ Database not available for tenant lookup, continuing without tenant');
+        console.log('⚠️ Database not available for tenant lookup, continuing without tenant:', dbError.message);
       }
+    } else if (!subdomain) {
+      console.log('⚠️ No subdomain found for tenant lookup');
     }
 
     next();
@@ -49,9 +64,17 @@ export const tenantMiddleware = async (req, res, next) => {
  */
 export const requireTenant = (req, res, next) => {
   if (!req.tenant) {
-    return res.status(404).json({ 
+    console.log('🚫 Tenant access blocked:', {
+      path: req.path,
+      method: req.method,
+      host: req.headers.host,
+      subdomain: req.headers['x-tenant-subdomain'],
+      user: req.user?.email || 'anonymous'
+    });
+
+    return res.status(404).json({
       error: 'Tenant not found',
-      message: 'Invalid subdomain or tenant not active'
+      message: 'Invalid subdomain or tenant not active. Please check your tenant configuration.'
     });
   }
   next();

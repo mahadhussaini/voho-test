@@ -1,6 +1,7 @@
 import express from 'express';
 import Call from '../models/Call.js';
 import { authenticate } from '../middleware/auth.js';
+import { requireTenant } from '../middleware/tenant.js';
 import { logAudit } from '../utils/auditLogger.js';
 import * as ultravox from '../services/ultravox.js';
 
@@ -13,7 +14,7 @@ const USE_MOCK = !process.env.ULTRAVOX_API_KEY || process.env.USE_MOCK_ULTRAVOX 
  * POST /api/calls
  * Create a new test call
  */
-router.post('/', authenticate, async (req, res, next) => {
+router.post('/', authenticate, requireTenant, async (req, res, next) => {
   try {
     const { systemPrompt, model, voice } = req.body;
 
@@ -54,7 +55,7 @@ router.post('/', authenticate, async (req, res, next) => {
  * GET /api/calls
  * Get all calls for tenant
  */
-router.get('/', authenticate, async (req, res, next) => {
+router.get('/', authenticate, requireTenant, async (req, res, next) => {
   try {
     const calls = await Call.find({ tenantId: req.tenantId })
       .populate('userId', 'email role')
@@ -71,7 +72,7 @@ router.get('/', authenticate, async (req, res, next) => {
  * GET /api/calls/:id
  * Get specific call details
  */
-router.get('/:id', authenticate, async (req, res, next) => {
+router.get('/:id', authenticate, requireTenant, async (req, res, next) => {
   try {
     const call = await Call.findOne({
       _id: req.params.id,
@@ -92,7 +93,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
  * GET /api/calls/:id/status
  * Get real-time call status from Ultravox
  */
-router.get('/:id/status', authenticate, async (req, res, next) => {
+router.get('/:id/status', authenticate, requireTenant, async (req, res, next) => {
   try {
     const call = await Call.findOne({
       _id: req.params.id,
@@ -150,7 +151,7 @@ router.get('/:id/status', authenticate, async (req, res, next) => {
  * GET /api/calls/:id/transcript
  * Get call transcript
  */
-router.get('/:id/transcript', authenticate, async (req, res, next) => {
+router.get('/:id/transcript', authenticate, requireTenant, async (req, res, next) => {
   try {
     const call = await Call.findOne({
       _id: req.params.id,

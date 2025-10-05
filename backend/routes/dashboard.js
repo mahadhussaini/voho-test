@@ -3,6 +3,7 @@ import Call from '../models/Call.js';
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { requireTenant } from '../middleware/tenant.js';
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ const router = express.Router();
  * GET /api/dashboard/metrics
  * Get dashboard metrics
  */
-router.get('/metrics', authenticate, async (req, res, next) => {
+router.get('/metrics', authenticate, requireTenant, async (req, res, next) => {
   try {
     const isAdmin = req.user.role === 'admin';
 
@@ -67,7 +68,7 @@ router.get('/metrics', authenticate, async (req, res, next) => {
  * GET /api/dashboard/audit-logs
  * Get audit logs (admin only)
  */
-router.get('/audit-logs', authenticate, requireAdmin, async (req, res, next) => {
+router.get('/audit-logs', authenticate, requireTenant, requireAdmin, async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
     
@@ -86,7 +87,7 @@ router.get('/audit-logs', authenticate, requireAdmin, async (req, res, next) => 
  * GET /api/dashboard/users
  * Get all users (admin only)
  */
-router.get('/users', authenticate, requireAdmin, async (req, res, next) => {
+router.get('/users', authenticate, requireTenant, requireAdmin, async (req, res, next) => {
   try {
     const users = await User.find({ tenantId: req.tenantId })
       .select('-password')
@@ -102,7 +103,7 @@ router.get('/users', authenticate, requireAdmin, async (req, res, next) => {
  * GET /api/dashboard/stats
  * Get real-time statistics
  */
-router.get('/stats', authenticate, async (req, res, next) => {
+router.get('/stats', authenticate, requireTenant, async (req, res, next) => {
   try {
     const isAdmin = req.user.role === 'admin';
     const baseQuery = { tenantId: req.tenantId };
