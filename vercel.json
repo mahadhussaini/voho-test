@@ -23,10 +23,5 @@
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Tenant-Subdomain" }
       ]
     }
-  ],
-  "functions": {
-    "frontend/dist/**/*": {
-      "runtime": "@vercel/node"
-    }
-  }
+  ]
 }
