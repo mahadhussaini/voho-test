@@ -10,7 +10,7 @@ const API_URL = (() => {
   }
 
   // In production (Vercel), use full backend URL
-  return 'https://voho-saas.onrender.com';
+  return 'https://voho-saas.onrender.com/api';
 })();
 
 /**
@@ -105,7 +105,7 @@ export const auth = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
-  
+
   login: (data) => apiRequest('/auth/login', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -115,12 +115,12 @@ export const auth = {
 // Tenant API
 export const tenant = {
   getBranding: () => apiRequest('/tenant/branding'),
-  
+
   updateBranding: (data) => apiRequest('/tenant/branding', {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  
+
   getInfo: () => apiRequest('/tenant/info'),
 }
 
@@ -130,24 +130,24 @@ export const calls = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
-  
+
   getAll: () => apiRequest('/calls'),
-  
+
   getById: (id) => apiRequest(`/calls/${id}`),
-  
+
   getStatus: (id) => apiRequest(`/calls/${id}/status`),
-  
+
   getTranscript: (id) => apiRequest(`/calls/${id}/transcript`),
 }
 
 // Dashboard API
 export const dashboard = {
   getMetrics: () => apiRequest('/dashboard/metrics'),
-  
+
   getStats: () => apiRequest('/dashboard/stats'),
-  
+
   getAuditLogs: (limit = 50) => apiRequest(`/dashboard/audit-logs?limit=${limit}`),
-  
+
   getUsers: () => apiRequest('/dashboard/users'),
 }
 

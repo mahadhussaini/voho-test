@@ -8,6 +8,10 @@
     {
       "source": "/api/(.*)",
       "destination": "https://voho-saas.onrender.com/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/frontend/dist/$1"
     }
   ]
 }

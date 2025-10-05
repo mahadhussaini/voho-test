@@ -11,6 +11,7 @@
     "lint": "cd frontend && npm run lint",
     "lint:fix": "cd frontend && npm run lint:fix",
     "deploy-check": "node deploy-check.js",
+    "deploy-fix": "node deploy-fix.js",
     "docker-test": "cd backend && docker build -t voho-backend-test . && docker run --rm -p 10000:10000 --env-file .env.example voho-backend-test npm run docker"
   },
   "keywords": [],
