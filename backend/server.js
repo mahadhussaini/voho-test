@@ -21,6 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'https://voho-saas.vercel.app',
+  'https://voho-saas-git-main-mahad-arshads-projects.vercel.app', // Main branch deployment
   'https://voho-saas-3qm8fabcj-mahad-arshads-projects.vercel.app', // Current Vercel deployment
   'https://voho-saas-mi3lqi5ab-mahad-arshads-projects.vercel.app', // Previous Vercel deployment
   'http://localhost:5173',
@@ -28,6 +29,8 @@ const allowedOrigins = [
   'https://localhost:5173',
   'https://localhost:3000'
 ].filter(Boolean); // Remove undefined values
+
+console.log('🔒 CORS allowed origins:', allowedOrigins);
 
 app.use(cors({
   origin: function (origin, callback) {

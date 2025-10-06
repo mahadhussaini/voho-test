@@ -30,19 +30,50 @@ const API_URL = (() => {
 })();
 
 /**
- * Get current subdomain from window location
+ * Get current subdomain from stored tenant data or window location
  */
 export const getSubdomain = () => {
-  const host = window.location.host
-  const parts = host.split('.')
-  
-  // If host is like "acme.localhost:5173" or "acme.example.com"
-  if (parts.length >= 2 && parts[0] !== 'localhost' && parts[0] !== 'www') {
-    return parts[0]
+  // First priority: get subdomain from stored authenticated tenant data
+  try {
+    const authData = JSON.parse(localStorage.getItem('voho-auth-storage') || '{}');
+    const tenant = authData?.state?.tenant;
+
+    if (tenant?.subdomain) {
+      console.log('✅ Using authenticated tenant subdomain:', tenant.subdomain);
+      return tenant.subdomain;
+    }
+  } catch (error) {
+    console.log('⚠️ Could not read tenant from localStorage:', error.message);
   }
-  
-  // For development, check localStorage
-  return localStorage.getItem('dev-subdomain') || null
+
+  // Second priority: For development, check localStorage dev subdomain
+  const devSubdomain = localStorage.getItem('dev-subdomain');
+  if (devSubdomain) {
+    console.log('🔄 Using development subdomain from localStorage:', devSubdomain);
+    return devSubdomain;
+  }
+
+  // Third priority: Try URL extraction for development environments
+  if (typeof window !== 'undefined') {
+    const host = window.location.host;
+    const parts = host.split('.');
+
+    // Only extract subdomain if it's clearly a tenant subdomain
+    // Skip if it's a generic hosting domain
+    if (parts.length >= 3 &&
+        parts[0] !== 'localhost' &&
+        parts[0] !== 'www' &&
+        !host.includes('vercel.app') &&
+        !host.includes('render.com') &&
+        !host.includes('netlify.app')) {
+      const extractedSubdomain = parts[0];
+      console.log('🔄 Using extracted subdomain from URL:', extractedSubdomain);
+      return extractedSubdomain;
+    }
+  }
+
+  console.log('⚠️ No subdomain found - user may need to specify tenant subdomain');
+  return null;
 }
 
 /**

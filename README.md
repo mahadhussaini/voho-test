@@ -148,8 +148,16 @@ The application includes professional SVG brand assets:
 
 **Frontend**: Deployed on Vercel with automatic builds from GitHub
 **Backend**: Deployed on Render with Docker containerization
+**Database**: MongoDB Atlas for scalable data storage
 
 See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete deployment instructions.
+
+### 🔐 Multi-Tenant Architecture
+
+- **Tenant Isolation**: Complete data separation between tenants
+- **Subdomain Routing**: Each tenant gets their own subdomain identifier
+- **Secure Access**: JWT authentication with tenant context validation
+- **Role-Based Permissions**: Admin and user access levels per tenant
 
 ### Environment Variables
 

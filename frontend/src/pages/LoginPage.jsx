@@ -22,24 +22,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Get subdomain and load tenant branding
-    const currentSubdomain = getSubdomain()
-    setSubdomain(currentSubdomain)
-
-    if (currentSubdomain) {
+    // For development, check if there's a stored subdomain
+    const devSubdomain = localStorage.getItem('dev-subdomain')
+    if (devSubdomain) {
+      setSubdomain(devSubdomain)
+      // Try to load tenant branding for development
       tenant.getBranding()
         .then(data => setTenantInfo(data))
-        .catch((error) => {
-          // Don't show error for missing tenant - this is expected for new users
-          console.log('Tenant branding not found (expected for new subdomain):', error.message)
-          setTenantInfo(null)
-        })
-    } else {
-      // For development, allow setting subdomain
-      const devSubdomain = localStorage.getItem('dev-subdomain')
-      if (devSubdomain) {
-        setSubdomain(devSubdomain)
-      }
+        .catch(() => setTenantInfo(null))
     }
   }, [])
 
@@ -47,6 +37,18 @@ export default function LoginPage() {
     const sub = e.target.value
     setSubdomain(sub)
     localStorage.setItem('dev-subdomain', sub)
+
+    // Try to load tenant branding when subdomain changes
+    if (sub) {
+      tenant.getBranding()
+        .then(data => setTenantInfo(data))
+        .catch((error) => {
+          console.log('Tenant branding not found:', error.message)
+          setTenantInfo(null)
+        })
+    } else {
+      setTenantInfo(null)
+    }
   }
 
   const handleSubmit = async (e) => {
